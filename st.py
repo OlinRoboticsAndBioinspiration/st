@@ -160,9 +160,9 @@ class StArm():
         t.sleep(2)
         self.check_result(DE_ENERGIZE)
 
-    def where(self):
-		print('Obtaining robot coordinates...')
-		self.cxn.write(WHERE + CR)
-		t.sleep(2)
-		print (self.cxn.read(self.cxn.inWaiting()))
-		self.check_result(WHERE)
+    #~ def where(self):
+		#~ print('Obtaining robot coordinates...')
+		#~ self.cxn.write(WHERE + CR)
+		#~ t.sleep(2)
+		#~ print (self.cxn.read(self.cxn.inWaiting()))
+		#~ self.check_result(WHERE)
