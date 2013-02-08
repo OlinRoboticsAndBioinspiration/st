@@ -24,6 +24,8 @@ WHERE = 'WHERE'
 CARTESIAN = 'CARTESIAN'
 MOVETO = 'MOVETO'
 HAND = 'HAND'
+ENERGIZE = 'ENERGIZE'
+DE_ENERGIZE = 'DE-ENERGIZE'
 
 class StArm():
     '''Class for controlling the 5-axis R17 arm from ST Robotics'''
@@ -47,7 +49,6 @@ class StArm():
         self.wait_read()
         self.purge()
         self.roboforth()
-        self.decimal()
         self.joint()
         self.start()
         self.calibrate()
@@ -146,6 +147,18 @@ class StArm():
 		t.sleep(5)
 		self.check_result(MOVETO)
 		self.cartesian()
+
+    def energize(self):
+        print('Powering motors...')
+        self.cxn.write(ENERGIZE + CR)
+        t.sleep(2)
+        self.check_result(ENERGIZE)
+
+    def de_energize(self):
+        print('Powering down motors...')
+        self.cxn.write(DE_ENERGIZE + CR)
+        t.sleep(2)
+        self.check_result(DE_ENERGIZE)
 
     def where(self):
 		print('Obtaining robot coordinates...')
