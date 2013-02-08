@@ -145,7 +145,6 @@ class StArm():
 		print('Moving hand to ' + str(roll) + '...')
 		self.cxn.write(str(roll) + ' MOVETO' + CR)
 		t.sleep(5)
-		self.check_result(MOVETO)
 		self.cartesian()
 
     def energize(self):
@@ -160,9 +159,8 @@ class StArm():
         t.sleep(2)
         self.check_result(DE_ENERGIZE)
 
-    #~ def where(self):
-		#~ print('Obtaining robot coordinates...')
-		#~ self.cxn.write(WHERE + CR)
-		#~ t.sleep(2)
-		#~ print (self.cxn.read(self.cxn.inWaiting()))
-		#~ self.check_result(WHERE)
+    def where(self):
+		print('Obtaining robot coordinates...')
+		self.cxn.write(WHERE + CR)
+		t.sleep(2)
+		print (self.cxn.read(self.cxn.inWaiting()))
