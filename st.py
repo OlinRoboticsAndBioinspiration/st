@@ -22,10 +22,14 @@ CALIBRATE = 'CALIBRATE'
 HOME = 'HOME'
 WHERE = 'WHERE'
 CARTESIAN = 'CARTESIAN'
+SPEED = 'SPEED'
+ACCEL = 'ACCEL'
 MOVETO = 'MOVETO'
 HAND = 'HAND'
 ENERGIZE = 'ENERGIZE'
 DE_ENERGIZE = 'DE-ENERGIZE'
+QUERY = ' ?'
+IMPERATIVE = ' !'
 
 class StArm():
     '''Class for controlling the 5-axis R17 arm from ST Robotics'''
@@ -132,12 +136,43 @@ class StArm():
         if self.cxn.isOpen():
             self.cxn.write('' + CR)
 
-    def move_to(self, x, y, z, pitch=None, roll=None):
+    def get_speed(self):
+        print('Getting current speed setting...')
+        self.cxn.write(SPEED + QUERY + CR)
+        t.sleep(1)
+        return int(self.cxn.read(self.cxn.inWaiting()).split(' ')[-2])
+
+    def set_speed(self, speed):
+        print('Setting speed to %d' % speed)
+        self.cxn.write(str(speed) + ' ' + SPEED + IMPERATIVE + CR)
+        t.sleep(1)
+        if self.get_speed() == speed:
+            print('Speed successfully set to %d' % speed)
+        else:
+            print('Failed to set speed!')
+
+    def get_accel(self):
+        print('Getting current acceleration setting...')
+        self.cxn.write(ACCEL + QUERY + CR)
+        t.sleep(1)
+        return int(self.cxn.read(self.cxn.inWaiting()).split(' ')[-2])
+
+    def set_accel(self, accel):
+        print('Setting acceleration to %d' % accel)
+        self.cxn.write(str(accel) + ' ' +ACCEL + IMPERATIVE + CR)
+        t.sleep(1)
+        if self.get_accel() == accel:
+            print('Acceleration successfully set to %d' % accel)
+        else:
+            print('Failed to set acceleration!')        
+
+    def move_to(self, x, y, z, check_result=False, pitch=None, roll=None):
         print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
         str(z) + ')')
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
-        t.sleep(5)
-        self.check_result(MOVETO)
+        if(check_result):
+            t.sleep(5)
+            self.check_result(MOVETO)
         
     def move_hand(self, roll):
 		self.joint()
