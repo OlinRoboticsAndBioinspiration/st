@@ -197,6 +197,7 @@ class StArm():
             print('Failed to set acceleration!')        
 
     def move_to(self, x, y, z, check_result=False, pitch=None, roll=None):
+        self.cartesian()
         print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
         str(z) + ')')
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
