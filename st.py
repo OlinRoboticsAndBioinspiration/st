@@ -150,6 +150,7 @@ class StArm():
         else:
             print result
             raise RuntimeError(cmd + ' command failed.')
+            return False
 
     def wait_read(self):
         print(str(self.cxn.inWaiting()))
@@ -237,6 +238,7 @@ class StArm():
         self.check_result(DE_ENERGIZE)
 
     def where(self):
+        self.cxn.flushInput()
         print('Obtaining robot coordinates...')
         self.cartesian()
         self.cxn.write(WHERE + CR)
