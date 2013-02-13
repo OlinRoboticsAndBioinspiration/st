@@ -84,6 +84,8 @@ class StArm():
             self.curr_pos = StPosCart(cp)
             self.prev_pos = StPosCart(pp)
         except:
+            self.curr_pos = StPosCart()
+            self.prev_pos = StPosCart()
             print('Unable to get current arm coordinates.')
 
     def purge(self):
@@ -122,7 +124,7 @@ class StArm():
         t.sleep(15)
         self.check_result(CALIBRATE)
 
-    def home(self, check_result):
+    def home(self, check_result=False):
         print('Homing...')
         self.cxn.write(HOME + CR)
         if check_result:
@@ -243,8 +245,11 @@ class StArm():
         self.cartesian()
         self.cxn.write(WHERE + CR)
         res = self.cxn.readlines()
-        print(res)
         cp = [int(10*float(x)) for x in shlex.split(res[2])]
         pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
 		
+        self.curr_pos.set(cp)
+        self.prev_pos.set(pp)
+        print(self.curr_pos)
+        print(self.prev_pos)
         return (cp, pp)
