@@ -1,6 +1,7 @@
 import serial as s
 import time as t
 import re
+import shlex
 
 # Use this one for Mac/Linux
 DEFAULT_DEV = '/dev/tty.KeySerial1'
@@ -26,10 +27,28 @@ SPEED = 'SPEED'
 ACCEL = 'ACCEL'
 MOVETO = 'MOVETO'
 HAND = 'HAND'
+WRIST = 'WRIST'
 ENERGIZE = 'ENERGIZE'
 DE_ENERGIZE = 'DE-ENERGIZE'
 QUERY = ' ?'
 IMPERATIVE = ' !'
+TELL = 'TELL'
+MOVE = 'MOVE'
+
+class StPosCart():
+    def __init__(self, pos=[0,0,0,0,0]):
+        self.set(pos)
+
+    def set(self, pos):
+        self.x = pos[0]
+        self.y = pos[1]
+        self.z = pos[2]
+        self.pitch = pos[3]
+        self.roll = pos[4]
+
+    def __repr__(self):
+        return '(x=%s, y=%s, z=%s, pitch=%s roll=%s)' % (self.x, self.y, self.z, self.pitch, self.roll)
+
 
 class StArm():
     '''Class for controlling the 5-axis R17 arm from ST Robotics'''
@@ -46,18 +65,26 @@ class StArm():
         connected to.
     '''
 
-    def __init__(self, dev=DEFAULT_DEV_PC, baud=DEFAULT_BAUD_RATE):
+    def __init__(self, dev=DEFAULT_DEV_PC, baud=DEFAULT_BAUD_RATE, init=True):
         self.cxn = s.Serial(dev, baudrate=baud, timeout=3)
         # TODO 
         # Check and parse return values of all ROBOFORTH methods called. 
-        self.wait_read()
-        self.purge()
-        self.roboforth()
-        self.joint()
-        self.start()
-        self.calibrate()
-        self.home()
-        self.cartesian()
+        if init:
+            self.wait_read()
+            self.purge()
+            self.roboforth()
+            self.joint()
+            self.start()
+            self.calibrate()
+            self.home()
+            self.cartesian()
+        
+        try:
+            (cp, pp) = self.where()
+            self.curr_pos = StPosCart(cp)
+            self.prev_pos = StPosCart(pp)
+        except:
+            print('Unable to get current arm coordinates.')
 
     def purge(self):
         print('Purging...')
@@ -95,11 +122,11 @@ class StArm():
         t.sleep(15)
         self.check_result(CALIBRATE)
 
-    def home(self):
+    def home(self, check_result):
         print('Homing...')
         self.cxn.write(HOME + CR)
-        t.sleep(5)
-        self.check_result(HOME)
+        if check_result:
+            self.check_result(HOME)
 
     def cartesian(self):
         print('Setting mode to Cartesian...')
@@ -114,7 +141,7 @@ class StArm():
 		self.check_result(HAND)
 
     def check_result(self, cmd):
-        while(self.cxn.inWaiting() == 0):
+        while not self.cxn.inWaiting():
             pass
         result = self.cxn.read(self.cxn.inWaiting())
         if result[-5:-3] == 'OK':
@@ -173,14 +200,29 @@ class StArm():
         if(check_result):
             t.sleep(5)
             self.check_result(MOVETO)
-        
+    
+    def rotate_wrist(self, roll):
+        print('Rotating wrist to %s' % roll)
+        self.cxn.write(TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO + CR)
+        self.check_result(MOVETO)
+
+    def rotate_wrist_rel(self, roll_inc):
+        print('Rotating wrist by %s.' % roll_inc)
+        self.cxn.write(TELL + ' ' + WRIST + ' ' + str(roll_inc) + ' ' + MOVE + CR)
+        self.check_result(MOVE)
+
+    def rotate_hand(self, pitch):
+        print('Rotating hand to %s.' %pitch)
+        self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch) + ' ' + MOVETO + CR)
+        self.check_result(MOVETO)
+
+    def rotate_hand_rel(self, pitch_inc):
+        print('Rotating hand by %s' % pitch_inc)
+        self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch_inc) + ' ' + MOVE + CR)
+        self.check_result(MOVE)
+
     def move_hand(self, roll):
-		self.joint()
-		self.hand()
-		print('Moving hand to ' + str(roll) + '...')
-		self.cxn.write(str(roll) + ' MOVETO' + CR)
-		t.sleep(5)
-		self.cartesian()
+		self.rotate_hand(roll)
 
     def energize(self):
         print('Powering motors...')
@@ -195,7 +237,12 @@ class StArm():
         self.check_result(DE_ENERGIZE)
 
     def where(self):
-		print('Obtaining robot coordinates...')
-		self.cxn.write(WHERE + CR)
-		t.sleep(2)
-		print (self.cxn.read(self.cxn.inWaiting()))
+        print('Obtaining robot coordinates...')
+        self.cartesian()
+        self.cxn.write(WHERE + CR)
+        res = self.cxn.readlines()
+        print(res)
+        cp = [int(10*float(x)) for x in shlex.split(res[2])]
+        pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
+		
+        return (cp, pp)
