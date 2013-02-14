@@ -76,7 +76,7 @@ class StArm():
             self.joint()
             self.start()
             self.calibrate()
-            self.home()
+            self.home(True)
             self.cartesian()
         
         try:
@@ -132,6 +132,7 @@ class StArm():
 
     def cartesian(self):
         print('Setting mode to Cartesian...')
+        self.cxn.flushInput()
         self.cxn.write(CARTESIAN + CR)
         t.sleep(2)
         self.check_result(CARTESIAN)
