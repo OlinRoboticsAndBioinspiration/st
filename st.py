@@ -77,6 +77,7 @@ class StArm():
             self.start()
             self.calibrate()
             self.home(True)
+            t.sleep(2)
             self.cartesian()
         
         try:
@@ -132,6 +133,8 @@ class StArm():
 
     def cartesian(self):
         print('Setting mode to Cartesian...')
+        t.sleep(3)
+        print("Here's the buffer contents: " + self.cxn.read(self.cxn.inWaiting()))
         self.cxn.flushInput()
         self.cxn.write(CARTESIAN + CR)
         t.sleep(2)
@@ -151,8 +154,8 @@ class StArm():
             print('Command ' + cmd + ' succeeded.')
             return True
         else:
-            print result
-            raise RuntimeError(cmd + ' command failed.')
+            print("Received this erronenous result: " + result)
+            #raise RuntimeError(cmd + ' command failed.')
             return False
 
     def wait_read(self):
