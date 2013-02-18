@@ -106,7 +106,7 @@ class StArm():
             self.prev_pos = StPosCart()
             print('Unable to get current arm coordinates.')
 
-    def make_cmd(self, cmd):
+#    def make_cmd(self, cmd):
         
 
     def purge(self):
