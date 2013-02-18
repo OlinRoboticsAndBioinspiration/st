@@ -70,15 +70,33 @@ class StArm():
         # TODO 
         # Check and parse return values of all ROBOFORTH methods called. 
         if init:
-            self.wait_read()
+            self.cxn.flushInput()
             self.purge()
+            t.sleep(1)
+            self.check_result(PURGE)
+            self.cxn.flushInput()
             self.roboforth()
+            t.sleep(3)
+            self.check_result(ROBOFORTH)
+            self.cxn.flushInput()
             self.joint()
+            t.sleep(1)
+            self.check_result(JOINT)
+            self.cxn.flushInput()
             self.start()
+            t.sleep(3)
+            self.check_result(START)
+            self.cxn.flushInput()
             self.calibrate()
+            t.sleep(20)
+            self.check_result(CALIBRATE)
+            self.cxn.flushInput()
             self.home()
+            t.sleep(5)
+            self.check_result(HOME)
+            self.cxn.flushInput()
             self.cartesian()
-
+            self.check_result(CARTESIAN)
         try:
             (cp, pp) = self.where()
             self.curr_pos = StPosCart(cp)
@@ -87,6 +105,9 @@ class StArm():
             self.curr_pos = StPosCart()
             self.prev_pos = StPosCart()
             print('Unable to get current arm coordinates.')
+
+    def make_cmd(self, cmd):
+        
 
     def purge(self):
         print('Purging...')
@@ -176,7 +197,7 @@ class StArm():
         else:
             print('Failed to set acceleration!')
 
-    def move_to(self, x, y, z, check_result=False, pitch=None, roll=None):
+    def move_to(self, x, y, z)
         self.cartesian()
         print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
         str(z) + ')')
