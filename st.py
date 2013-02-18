@@ -233,8 +233,8 @@ class StArm():
         cp = [int(10*float(x)) for x in shlex.split(res[2])]
         pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
 
-        self.curr_pos.set(cp)
-        self.prev_pos.set(pp)
-        print(self.curr_pos)
-        print(self.prev_pos)
+#        self.curr_pos.set(cp)
+#        self.prev_pos.set(pp)
+#        print(self.curr_pos)
+#        print(self.prev_pos)
         return (cp, pp)
