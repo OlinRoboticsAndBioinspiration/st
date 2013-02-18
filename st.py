@@ -122,7 +122,7 @@ class StArm():
     def calibrate(self):
         print('Calibrating...')
         self.cxn.write(CALIBRATE + CR)
-        t.sleep(15)
+        t.sleep(20)
         self.check_result(CALIBRATE)
 
     def home(self, check_result=False):
