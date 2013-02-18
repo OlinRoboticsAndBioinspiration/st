@@ -74,40 +74,43 @@ class StArm():
             self.purge()
             t.sleep(1)
             self.check_result(PURGE)
-            self.cxn.flushInput()
             self.roboforth()
             t.sleep(3)
             self.check_result(ROBOFORTH)
-            self.cxn.flushInput()
             self.joint()
             t.sleep(1)
             self.check_result(JOINT)
-            self.cxn.flushInput()
             self.start()
             t.sleep(3)
             self.check_result(START)
-            self.cxn.flushInput()
             self.calibrate()
             t.sleep(20)
             self.check_result(CALIBRATE)
-            self.cxn.flushInput()
             self.home()
             t.sleep(5)
             self.check_result(HOME)
             self.cxn.flushInput()
             self.cartesian()
+            t.sleep(3)
             self.check_result(CARTESIAN)
-        try:
-            (cp, pp) = self.where()
-            self.curr_pos = StPosCart(cp)
-            self.prev_pos = StPosCart(pp)
-        except:
-            self.curr_pos = StPosCart()
-            self.prev_pos = StPosCart()
-            print('Unable to get current arm coordinates.')
 
-#    def make_cmd(self, cmd):
-        
+#        try:
+#            (cp, pp) = self.where()
+#            self.curr_pos = StPosCart(cp)
+#            self.prev_pos = StPosCart(pp)
+#        except:
+#            self.curr_pos = StPosCart()
+#            self.prev_pos = StPosCart()
+#            print('Unable to get current arm coordinates.')
+
+    def send(self, cmd, args=None):
+        self.cxn.flushInput()
+        print('Executing ' + cmd)
+        if args is not None:
+            str_args = ' '.join(map(str, args))
+            cmd_str = str_args + ' ' + cmd + CR
+        else:
+            cmd_str = cmd + CR
 
     def purge(self):
         print('Purging...')
@@ -155,14 +158,6 @@ class StArm():
             #raise RuntimeError(cmd + ' command failed.')
             return False
 
-    def wait_read(self):
-        print(str(self.cxn.inWaiting()))
-        while(self.cxn.inWaiting()):
-            if self.cxn.inWaiting() == 1:
-                print self.cxn.read()
-                break
-            print(self.cxn.readline())
-
     def get_status(self):
         if self.cxn.isOpen():
             self.cxn.write('' + CR)
@@ -176,7 +171,7 @@ class StArm():
     def set_speed(self, speed):
         print('Setting speed to %d' % speed)
         self.cxn.write(str(speed) + ' ' + SPEED + IMPERATIVE + CR)
-        t.sleep(1)
+        t.sleep(1.5)
         if self.get_speed() == speed:
             print('Speed successfully set to %d' % speed)
         else:
@@ -191,16 +186,15 @@ class StArm():
     def set_accel(self, accel):
         print('Setting acceleration to %d' % accel)
         self.cxn.write(str(accel) + ' ' +ACCEL + IMPERATIVE + CR)
-        t.sleep(1)
+        t.sleep(1.5)
         if self.get_accel() == accel:
             print('Acceleration successfully set to %d' % accel)
         else:
             print('Failed to set acceleration!')
 
-    def move_to(self, x, y, z)
-        self.cartesian()
+    def move_to(self, x, y, z):
         print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
-        str(z) + ')')
+              str(z) + ')')
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
 
     def rotate_wrist(self, roll):
@@ -234,12 +228,11 @@ class StArm():
     def where(self):
         self.cxn.flushInput()
         print('Obtaining robot coordinates...')
-        self.cartesian()
         self.cxn.write(WHERE + CR)
         res = self.cxn.readlines()
         cp = [int(10*float(x)) for x in shlex.split(res[2])]
         pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
-		
+
         self.curr_pos.set(cp)
         self.prev_pos.set(pp)
         print(self.curr_pos)
