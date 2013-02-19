@@ -94,58 +94,58 @@ class StArm():
             t.sleep(3)
             self.check_result(CARTESIAN)
 
-#        try:
-#            (cp, pp) = self.where()
-#            self.curr_pos = StPosCart(cp)
-#            self.prev_pos = StPosCart(pp)
-#        except:
-#            self.curr_pos = StPosCart()
-#            self.prev_pos = StPosCart()
-#            print('Unable to get current arm coordinates.')
-
-    def send(self, cmd, args=None):
-        self.cxn.flushInput()
-        print('Executing ' + cmd)
-        if args is not None:
-            str_args = ' '.join(map(str, args))
-            cmd_str = str_args + ' ' + cmd + CR
-        else:
-            cmd_str = cmd + CR
+        try:
+            (cp, pp) = self.where()
+            self.curr_pos = StPosCart(cp)
+            self.prev_pos = StPosCart(pp)
+        except:
+            self.curr_pos = StPosCart()
+            self.prev_pos = StPosCart()
+            print('Unable to get current arm coordinates.')
 
     def purge(self):
         print('Purging...')
+        self.cxn.flushInput()
         self.cxn.write(PURGE + CR)
 
     def roboforth(self):
         print('Starting RoboForth...')
+        self.cxn.flushInput()
         self.cxn.write(ROBOFORTH + CR)
 
     def decimal(self):
 		print('Setting decimal mode...')
+        self.cxn.flushInput()
 		self.cxn.write(DECIMAL + CR)
 
     def start(self):
         print('Starting...')
+        self.cxn.flushInput()
         self.cxn.write(START + CR)
 
     def joint(self):
 		print('Setting Joint mode...')
+        self.cxn.flushInput()
 		self.cxn.write(JOINT + CR)
 
     def calibrate(self):
         print('Calibrating...')
+        self.cxn.flushInput()
         self.cxn.write(CALIBRATE + CR)
 
     def home(self):
         print('Homing...')
+        self.cxn.flushInput()
         self.cxn.write(HOME + CR)
 
     def cartesian(self):
         print('Setting mode to Cartesian...')
+        self.cxn.flushInput()
         self.cxn.write(CARTESIAN + CR)
 
     def hand(self):
 		print('Controlling hand...')
+        self.cxn.flushInput()
 		self.cxn.write(HAND + CR)
 
     def check_result(self, cmd):
@@ -164,12 +164,14 @@ class StArm():
 
     def get_speed(self):
         print('Getting current speed setting...')
+        self.cxn.flushInput()
         self.cxn.write(SPEED + QUERY + CR)
         t.sleep(1)
         return int(self.cxn.read(self.cxn.inWaiting()).split(' ')[-2])
 
     def set_speed(self, speed):
         print('Setting speed to %d' % speed)
+        self.cxn.flushInput()
         self.cxn.write(str(speed) + ' ' + SPEED + IMPERATIVE + CR)
         t.sleep(1.5)
         if self.get_speed() == speed:
@@ -179,12 +181,14 @@ class StArm():
 
     def get_accel(self):
         print('Getting current acceleration setting...')
+        self.cxn.flushInput()
         self.cxn.write(ACCEL + QUERY + CR)
         t.sleep(1)
         return int(self.cxn.read(self.cxn.inWaiting()).split(' ')[-2])
 
     def set_accel(self, accel):
         print('Setting acceleration to %d' % accel)
+        self.cxn.flushInput()
         self.cxn.write(str(accel) + ' ' +ACCEL + IMPERATIVE + CR)
         t.sleep(1.5)
         if self.get_accel() == accel:
@@ -195,22 +199,27 @@ class StArm():
     def move_to(self, x, y, z):
         print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
               str(z) + ')')
+        self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
 
     def rotate_wrist(self, roll):
         print('Rotating wrist to %s' % roll)
+        self.cxn.flushInput()
         self.cxn.write(TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO + CR)
 
     def rotate_wrist_rel(self, roll_inc):
         print('Rotating wrist by %s.' % roll_inc)
+        self.cxn.flushInput()
         self.cxn.write(TELL + ' ' + WRIST + ' ' + str(roll_inc) + ' ' + MOVE + CR)
 
     def rotate_hand(self, pitch):
         print('Rotating hand to %s.' %pitch)
+        self.cxn.flushInput()
         self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch) + ' ' + MOVETO + CR)
 
     def rotate_hand_rel(self, pitch_inc):
         print('Rotating hand by %s' % pitch_inc)
+        self.cxn.flushInput()
         self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch_inc) + ' ' + MOVE + CR)
 
     def move_hand(self, roll):
@@ -218,23 +227,23 @@ class StArm():
 
     def energize(self):
         print('Powering motors...')
+        self.cxn.flushInput()
         self.cxn.write(ENERGIZE + CR)
-        self.check_result(ENERGIZE)
 
     def de_energize(self):
         print('Powering down motors...')
+        self.check_result(ENERGIZE)
         self.cxn.write(DE_ENERGIZE + CR)
 
     def where(self):
-        self.cxn.flushInput()
         print('Obtaining robot coordinates...')
+        self.cxn.flushInput()
         self.cxn.write(WHERE + CR)
         res = self.cxn.readlines()
         cp = [int(10*float(x)) for x in shlex.split(res[2])]
         pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
 
-#        self.curr_pos.set(cp)
-#        self.prev_pos.set(pp)
-#        print(self.curr_pos)
-#        print(self.prev_pos)
+        self.curr_pos.set(cp)
+        self.prev_pos.set(pp)
+
         return (cp, pp)
