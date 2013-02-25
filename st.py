@@ -114,9 +114,9 @@ class StArm():
         self.cxn.write(ROBOFORTH + CR)
 
     def decimal(self):
-		print('Setting decimal mode...')
+        print('Setting decimal mode...')
         self.cxn.flushInput()
-		self.cxn.write(DECIMAL + CR)
+        self.cxn.write(DECIMAL + CR)
 
     def start(self):
         print('Starting...')
@@ -124,9 +124,9 @@ class StArm():
         self.cxn.write(START + CR)
 
     def joint(self):
-		print('Setting Joint mode...')
+        print('Setting Joint mode...')
         self.cxn.flushInput()
-		self.cxn.write(JOINT + CR)
+        self.cxn.write(JOINT + CR)
 
     def calibrate(self):
         print('Calibrating...')
@@ -144,9 +144,9 @@ class StArm():
         self.cxn.write(CARTESIAN + CR)
 
     def hand(self):
-		print('Controlling hand...')
+        print('Controlling hand...')
         self.cxn.flushInput()
-		self.cxn.write(HAND + CR)
+        self.cxn.write(HAND + CR)
 
     def check_result(self, cmd):
         result = self.cxn.read(self.cxn.inWaiting())
@@ -196,9 +196,10 @@ class StArm():
         else:
             print('Failed to set acceleration!')
 
-    def move_to(self, x, y, z):
-        print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
-              str(z) + ')')
+    def move_to(self, x, y, z, debug=True):
+        if debug:
+            print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
+                str(z) + ')')
         self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
 
@@ -223,7 +224,7 @@ class StArm():
         self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch_inc) + ' ' + MOVE + CR)
 
     def move_hand(self, roll):
-		self.rotate_hand(roll)
+        self.rotate_hand(roll)
 
     def energize(self):
         print('Powering motors...')
