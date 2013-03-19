@@ -66,52 +66,38 @@ class StArm():
     '''
 
     def __init__(self, dev=DEFAULT_DEV_PC, baud=DEFAULT_BAUD_RATE, init=True):
-        self.cxn = s.Serial(dev, baudrate=baud, timeout=3)
+        self.cxn = s.Serial(dev, baudrate=baud, timeout=0.05)
         # TODO 
         # Check and parse return values of all ROBOFORTH methods called. 
         if init:
             self.cxn.flushInput()
             self.purge()
-            t.sleep(1)
-            self.check_result(PURGE)
             self.roboforth()
-            t.sleep(3)
-            self.check_result(ROBOFORTH)
             self.joint()
-            t.sleep(1)
-            self.check_result(JOINT)
             self.start()
-            t.sleep(3)
-            self.check_result(START)
             self.calibrate()
-            t.sleep(20)
-            self.check_result(CALIBRATE)
             self.home()
-            t.sleep(5)
-            self.check_result(HOME)
-            self.cxn.flushInput()
             self.cartesian()
-            t.sleep(3)
-            self.check_result(CARTESIAN)
 
-        try:
+            self.curr_pos = StPosCart()
+            self.prev_pos = StPosCart()
             (cp, pp) = self.where()
             self.curr_pos = StPosCart(cp)
             self.prev_pos = StPosCart(pp)
-        except:
-            self.curr_pos = StPosCart()
-            self.prev_pos = StPosCart()
-            print('Unable to get current arm coordinates.')
 
     def purge(self):
+        cmd = PURGE
         print('Purging...')
         self.cxn.flushInput()
-        self.cxn.write(PURGE + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def roboforth(self):
+        cmd = ROBOFORTH
         print('Starting RoboForth...')
         self.cxn.flushInput()
-        self.cxn.write(ROBOFORTH + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def decimal(self):
         print('Setting decimal mode...')
@@ -119,128 +105,160 @@ class StArm():
         self.cxn.write(DECIMAL + CR)
 
     def start(self):
+        cmd = START
         print('Starting...')
         self.cxn.flushInput()
-        self.cxn.write(START + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def joint(self):
+        cmd = JOINT
         print('Setting Joint mode...')
         self.cxn.flushInput()
-        self.cxn.write(JOINT + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def calibrate(self):
+        cmd = CALIBRATE
         print('Calibrating...')
         self.cxn.flushInput()
-        self.cxn.write(CALIBRATE + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def home(self):
+        cmd = HOME
         print('Homing...')
         self.cxn.flushInput()
-        self.cxn.write(HOME + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def cartesian(self):
+        cmd = CARTESIAN
         print('Setting mode to Cartesian...')
         self.cxn.flushInput()
-        self.cxn.write(CARTESIAN + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
-    def hand(self):
-        print('Controlling hand...')
-        self.cxn.flushInput()
-        self.cxn.write(HAND + CR)
+    # def hand(self):
+    #     print('Controlling hand...')
+    #     self.cxn.flushInput()
+    #     self.cxn.write(HAND + CR)
 
-    def check_result(self, cmd):
-        result = self.cxn.read(self.cxn.inWaiting())
-        if result[-5:-3] == 'OK':
-            print('Command ' + cmd + ' succeeded.')
-            return True
-        else:
-            print("Received this erronenous result: " + result)
-            #raise RuntimeError(cmd + ' command failed.')
-            return False
+    def block_on_result(self, cmd, debug=False):
+        res = ''
+        while res[-4:-2] != 'OK':
+            res = self.cxn.readline()
+            if res == '>':
+                print('Command ' + cmd + ' completed without verification of success.')
+                return
+
+        if debug:
+            print('Command ' + cmd + ' completed successfully.')
+        return res
 
     def get_status(self):
         if self.cxn.isOpen():
             self.cxn.write('' + CR)
 
     def get_speed(self):
+        cmd = SPEED + QUERY
         print('Getting current speed setting...')
         self.cxn.flushInput()
-        self.cxn.write(SPEED + QUERY + CR)
-        t.sleep(1)
-        return int(self.cxn.read(self.cxn.inWaiting()).split(' ')[-2])
+        self.cxn.write(cmd + CR)
+        result = self.block_on_result(cmd)
+        return int(result.split(' ')[-2])
 
     def set_speed(self, speed):
         print('Setting speed to %d' % speed)
+        cmd = str(speed) + ' ' + SPEED + IMPERATIVE
         self.cxn.flushInput()
-        self.cxn.write(str(speed) + ' ' + SPEED + IMPERATIVE + CR)
-        t.sleep(1.5)
-        if self.get_speed() == speed:
-            print('Speed successfully set to %d' % speed)
-        else:
-            print('Failed to set speed!')
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def get_accel(self):
+        cmd = ACCEL + QUERY
         print('Getting current acceleration setting...')
         self.cxn.flushInput()
-        self.cxn.write(ACCEL + QUERY + CR)
-        t.sleep(1)
-        return int(self.cxn.read(self.cxn.inWaiting()).split(' ')[-2])
+        self.cxn.write(cmd + CR)
+        result = self.block_on_result(cmd)
+        return int(result.split(' ')[-2])
 
     def set_accel(self, accel):
+        cmd = str(accel) + ' ' + ACCEL + IMPERATIVE 
         print('Setting acceleration to %d' % accel)
         self.cxn.flushInput()
-        self.cxn.write(str(accel) + ' ' +ACCEL + IMPERATIVE + CR)
-        t.sleep(1.5)
-        if self.get_accel() == accel:
-            print('Acceleration successfully set to %d' % accel)
-        else:
-            print('Failed to set acceleration!')
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
-    def move_to(self, x, y, z, debug=True):
+    def move_to(self, x, y, z, debug=False):
+        cmd = str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO'
         if debug:
             print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
                 str(z) + ')')
         self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
+        self.block_on_result(cmd)
+        self.where()
 
     def rotate_wrist(self, roll):
+        cmd = TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO
         print('Rotating wrist to %s' % roll)
         self.cxn.flushInput()
-        self.cxn.write(TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def rotate_wrist_rel(self, roll_inc):
+        cmd = TELL + ' ' + WRIST + ' ' + str(roll_inc) + ' ' + MOVE
         print('Rotating wrist by %s.' % roll_inc)
         self.cxn.flushInput()
-        self.cxn.write(TELL + ' ' + WRIST + ' ' + str(roll_inc) + ' ' + MOVE + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
+        self.where()
 
     def rotate_hand(self, pitch):
+        cmd = TELL + ' ' + HAND + ' ' + str(pitch) + ' ' + MOVETO
         print('Rotating hand to %s.' %pitch)
         self.cxn.flushInput()
-        self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch) + ' ' + MOVETO + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
+        self.where()
 
     def rotate_hand_rel(self, pitch_inc):
+        cmd = TELL + ' ' + HAND + ' ' + str(pitch_inc) + ' ' + MOVE
         print('Rotating hand by %s' % pitch_inc)
         self.cxn.flushInput()
-        self.cxn.write(TELL + ' ' + HAND + ' ' + str(pitch_inc) + ' ' + MOVE + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
+        self.cartesian()
+        self.where()
 
     def move_hand(self, roll):
         self.rotate_hand(roll)
 
     def energize(self):
+        cmd = ENERGIZE
         print('Powering motors...')
         self.cxn.flushInput()
-        self.cxn.write(ENERGIZE + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def de_energize(self):
+        cmd = DE_ENERGIZE
         print('Powering down motors...')
-        self.check_result(ENERGIZE)
-        self.cxn.write(DE_ENERGIZE + CR)
+        self.cxn.write(cmd + CR)
+        self.block_on_result(cmd)
 
     def where(self):
-        print('Obtaining robot coordinates...')
         self.cxn.flushInput()
         self.cxn.write(WHERE + CR)
         res = self.cxn.readlines()
+        while res[4].strip() != 'OK':
+            if res[5] == '>':
+                print(res)
+                print('WHERE command completed without verification of success.')
+                break
+            res = readlines()
+
         cp = [int(10*float(x)) for x in shlex.split(res[2])]
         pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
 
