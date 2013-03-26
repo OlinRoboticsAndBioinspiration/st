@@ -2,13 +2,15 @@ import serial as s
 import time as t
 import re
 import shlex
+import re
 
 # Use this one for Mac/Linux
 DEFAULT_DEV = '/dev/tty.KeySerial1'
 
 # Use this one for PC
-DEFAULT_DEV_PC = 'COM3'
+DEFAULT_DEV = 'COM7'
 DEFAULT_BAUD_RATE = 19200
+DEFAULT_TIMEOUT = 0.05
 
 # Roboforth Strings
 CR = '\r'
@@ -34,6 +36,8 @@ QUERY = ' ?'
 IMPERATIVE = ' !'
 TELL = 'TELL'
 MOVE = 'MOVE'
+
+OK = 'OK'
 
 class StPosCart():
     def __init__(self, pos=[0,0,0,0,0]):
@@ -65,8 +69,8 @@ class StArm():
         connected to.
     '''
 
-    def __init__(self, dev=DEFAULT_DEV_PC, baud=DEFAULT_BAUD_RATE, init=True):
-        self.cxn = s.Serial(dev, baudrate=baud, timeout=0.05)
+    def __init__(self, dev=DEFAULT_DEV, baud=DEFAULT_BAUD_RATE, init=True, to=DEFAULT_TIMEOUT):
+        self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
         # TODO 
         # Check and parse return values of all ROBOFORTH methods called. 
         if init:
@@ -79,11 +83,9 @@ class StArm():
             self.home()
             self.cartesian()
 
-            self.curr_pos = StPosCart()
-            self.prev_pos = StPosCart()
-            (cp, pp) = self.where()
-            self.curr_pos = StPosCart(cp)
-            self.prev_pos = StPosCart(pp)
+        self.curr_pos = StPosCart()
+        self.prev_pos = StPosCart()
+        self.where()
 
     def purge(self):
         cmd = PURGE
@@ -145,12 +147,22 @@ class StArm():
     #     self.cxn.write(HAND + CR)
 
     def block_on_result(self, cmd, debug=False):
-        res = ''
-        while res[-4:-2] != 'OK':
-            res = self.cxn.readline()
-            if res == '>':
-                print('Command ' + cmd + ' completed without verification of success.')
-                return
+        try:
+            s = self.cxn.read(self.cxn.inWaiting())
+            res = re.search(OK,s).group(0)
+        except AttributeError:
+            res = ''
+
+        while res != OK:
+            s += self.cxn.read(self.cxn.inWaiting())
+            try:
+                res = re.search('>',s).group(0)
+                res = re.search(OK,s).group(0)
+                if res == '>':
+                    print('Command ' + cmd + ' completed without verification of success.')
+                    return
+            except AttributeError:
+                res = ''
 
         if debug:
             print('Command ' + cmd + ' completed successfully.')
@@ -190,15 +202,16 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def move_to(self, x, y, z, debug=False):
+    def move_to(self, x, y, z, debug=False, block=True):
         cmd = str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO'
         if debug:
             print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
                 str(z) + ')')
         self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
-        self.block_on_result(cmd)
-        self.where()
+        if block:
+            self.block_on_result(cmd)
+            self.where()
 
     def rotate_wrist(self, roll):
         cmd = TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO
@@ -213,6 +226,7 @@ class StArm():
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
+        self.cartesian()
         self.where()
 
     def rotate_hand(self, pitch):
@@ -251,18 +265,28 @@ class StArm():
     def where(self):
         self.cxn.flushInput()
         self.cxn.write(WHERE + CR)
-        res = self.cxn.readlines()
-        while res[4].strip() != 'OK':
-            if res[5] == '>':
-                print(res)
-                print('WHERE command completed without verification of success.')
-                break
-            res = readlines()
+        res = self.cxn.readline()
+        try:
+            while res[-2:] != 'OK':
+                res += self.cxn.readline()
+                if res != '':
+                    if res[-3] == '>':
+                        print('WHERE command completed without verification of success.')
+                        break
 
-        cp = [int(10*float(x)) for x in shlex.split(res[2])]
-        pp = [int(10*float(x)) for x in shlex.split(res[3])[1:]]
+            
+            lines = res.split('\r\n')
+            #TODO: Need to account for possibility that arm is in decimal mode
+            cp = [int(x.strip()) for x in shlex.split(lines[2])]
+            pp = [int(x.strip()) for x in shlex.split(lines[3])]
 
-        self.curr_pos.set(cp)
-        self.prev_pos.set(pp)
+            self.curr_pos.set(cp)
+            self.prev_pos.set(pp)
+        except RuntimeError, e:
+            print('Exception in where.')
+            print(e)
+            self.curr_pos.set([0,0,0,0,0])
+            self.prev_pos.set([0,0,0,0,0])
 
-        return (cp, pp)
+
+        return (self.curr_pos, self.prev_pos)
