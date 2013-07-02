@@ -1,8 +1,6 @@
 import serial as s
-import time as t
 import re
 import shlex
-import re
 
 # Use this one for Mac/Linux
 DEFAULT_DEV = '/dev/tty.KeySerial1'
@@ -39,8 +37,10 @@ MOVE = 'MOVE'
 
 OK = 'OK'
 
+
 class StPosCart():
-    def __init__(self, pos=[0,0,0,0,0]):
+
+    def __init__(self, pos=[0, 0, 0, 0, 0]):
         self.set(pos)
 
     def set(self, pos):
@@ -51,12 +51,14 @@ class StPosCart():
         self.roll = pos[4]
 
     def __repr__(self):
-        return '(x=%s, y=%s, z=%s, pitch=%s roll=%s)' % (self.x, self.y, self.z, self.pitch, self.roll)
+        return '(x=%s, y=%s, z=%s, pitch=%s roll=%s)' % (self.x, self.y,
+                                                         self.z,
+                                                         self.pitch,
+                                                         self.roll)
 
 
 class StArm():
     '''Class for controlling the 5-axis R17 arm from ST Robotics'''
-
 
     '''
     Description:
@@ -69,10 +71,11 @@ class StArm():
         connected to.
     '''
 
-    def __init__(self, dev=DEFAULT_DEV, baud=DEFAULT_BAUD_RATE, init=True, to=DEFAULT_TIMEOUT):
+    def __init__(self, dev=DEFAULT_DEV, baud=DEFAULT_BAUD_RATE,
+                 init=True, to=DEFAULT_TIMEOUT):
         self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
-        # TODO 
-        # Check and parse return values of all ROBOFORTH methods called. 
+        # TODO
+        # Check and parse return values of all ROBOFORTH methods called.
         if init:
             self.cxn.flushInput()
             self.purge()
@@ -134,39 +137,35 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def cartesian(self):
+    def cartesian(self, block=False):
         cmd = CARTESIAN
         print('Setting mode to Cartesian...')
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    # def hand(self):
-    #     print('Controlling hand...')
-    #     self.cxn.flushInput()
-    #     self.cxn.write(HAND + CR)
-
     def block_on_result(self, cmd, debug=False):
         try:
             s = self.cxn.read(self.cxn.inWaiting())
-            res = re.search(OK,s).group(0)
+            res = re.search(OK, s).group(0)
         except AttributeError:
             res = ''
 
         while res != OK:
             s += self.cxn.read(self.cxn.inWaiting())
             try:
-                res = re.search('>',s).group(0)
-                res = re.search(OK,s).group(0)
+                res = re.search('>', s).group(0)
+                res = re.search(OK, s).group(0)
                 if res == '>':
-                    print('Command ' + cmd + ' completed without verification of success.')
+                    print('Command ' + cmd + ' completed without ' +
+                          'verification of success.')
                     return
             except AttributeError:
                 res = ''
 
         if debug:
             print('Command ' + cmd + ' completed successfully.')
-        return res
+        return s
 
     def get_status(self):
         if self.cxn.isOpen():
@@ -178,6 +177,7 @@ class StArm():
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         result = self.block_on_result(cmd)
+        print(result)
         return int(result.split(' ')[-2])
 
     def set_speed(self, speed):
@@ -196,7 +196,7 @@ class StArm():
         return int(result.split(' ')[-2])
 
     def set_accel(self, accel):
-        cmd = str(accel) + ' ' + ACCEL + IMPERATIVE 
+        cmd = str(accel) + ' ' + ACCEL + IMPERATIVE
         print('Setting acceleration to %d' % accel)
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
@@ -205,8 +205,8 @@ class StArm():
     def move_to(self, x, y, z, debug=False, block=True):
         cmd = str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO'
         if debug:
-            print('Moving to cartesian coords: (' + str(x) + ', ' + str(y) + ', ' + \
-                str(z) + ')')
+            print('Moving to cartesian coords: (' + str(x) + ', ' +
+                  str(y) + ', ' + str(z) + ')')
         self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
         if block:
@@ -231,7 +231,7 @@ class StArm():
 
     def rotate_hand(self, pitch):
         cmd = TELL + ' ' + HAND + ' ' + str(pitch) + ' ' + MOVETO
-        print('Rotating hand to %s.' %pitch)
+        print('Rotating hand to %s.' % pitch)
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
@@ -263,30 +263,35 @@ class StArm():
         self.block_on_result(cmd)
 
     def where(self):
+        cmd = WHERE
         self.cxn.flushInput()
-        self.cxn.write(WHERE + CR)
+        self.cxn.write(cmd + CR)
+        #res = self.block_on_result(cmd)
         res = self.cxn.readline()
+        #TODO
+        #Rewrite this method to use block_on_result
         try:
-            while res[-2:] != 'OK':
+            while re.search(OK, res) is None:
+            #while res[-2:] != 'OK':
                 res += self.cxn.readline()
                 if res != '':
                     if res[-3] == '>':
-                        print('WHERE command completed without verification of success.')
+                        print('WHERE command completed without' +
+                              ' verification of success.')
                         break
 
-            
             lines = res.split('\r\n')
             #TODO: Need to account for possibility that arm is in decimal mode
-            cp = [int(x.strip()) for x in shlex.split(lines[2])]
-            pp = [int(x.strip()) for x in shlex.split(lines[3])]
+
+            cp = [int(x.strip().replace('.', '')) for x in shlex.split(lines[2])]
+            pp = [int(x.strip().replace('.', '')) for x in shlex.split(lines[3])[1:]]
 
             self.curr_pos.set(cp)
             self.prev_pos.set(pp)
         except RuntimeError, e:
             print('Exception in where.')
             print(e)
-            self.curr_pos.set([0,0,0,0,0])
-            self.prev_pos.set([0,0,0,0,0])
-
+            self.curr_pos.set([0, 0, 0, 0, 0])
+            self.prev_pos.set([0, 0, 0, 0, 0])
 
         return (self.curr_pos, self.prev_pos)
