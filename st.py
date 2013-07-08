@@ -155,11 +155,12 @@ class StArm():
             s += self.cxn.read(self.cxn.inWaiting())
             try:
                 res = re.search('>', s).group(0)
-                res = re.search(OK, s).group(0)
                 if res == '>':
                     print('Command ' + cmd + ' completed without ' +
                           'verification of success.')
                     return
+                else:
+                    res = re.search(OK, s).group(0)
             except AttributeError:
                 res = ''
 
@@ -283,8 +284,10 @@ class StArm():
             lines = res.split('\r\n')
             #TODO: Need to account for possibility that arm is in decimal mode
 
-            cp = [int(x.strip().replace('.', '')) for x in shlex.split(lines[2])]
-            pp = [int(x.strip().replace('.', '')) for x in shlex.split(lines[3])[1:]]
+            cp = [int(x.strip().replace('.', ''))
+                  for x in shlex.split(lines[2])]
+            pp = [int(x.strip().replace('.', ''))
+                  for x in shlex.split(lines[3])[1:]]
 
             self.curr_pos.set(cp)
             self.prev_pos.set(pp)
