@@ -34,6 +34,8 @@ QUERY = ' ?'
 IMPERATIVE = ' !'
 TELL = 'TELL'
 MOVE = 'MOVE'
+CARTESIAN_NEW_ROUTE = 'CARTESIAN NEW ROUTE'
+RESERVE = 'RESERVE'
 
 OK = 'OK'
 
@@ -76,6 +78,7 @@ class StArm():
         self.cxn = s.Serial(dev, baudrate=baud, timeout=to)
         # TODO
         # Check and parse return values of all ROBOFORTH methods called.
+        self.debug = False
         if init:
             self.cxn.flushInput()
             self.purge()
@@ -89,6 +92,11 @@ class StArm():
         self.curr_pos = StPosCart()
         self.prev_pos = StPosCart()
         self.where()
+
+        self.tool_length = 0
+
+    def set_tool_length(self, length):
+        self.tool_length = length
 
     def purge(self):
         cmd = PURGE
@@ -137,34 +145,23 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def cartesian(self, block=False):
+    def cartesian(self):
         cmd = CARTESIAN
         print('Setting mode to Cartesian...')
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def block_on_result(self, cmd, debug=False):
-        try:
-            s = self.cxn.read(self.cxn.inWaiting())
-            res = re.search(OK, s).group(0)
-        except AttributeError:
-            res = ''
+    def block_on_result(self, cmd):
+        s = self.cxn.read(self.cxn.inWaiting())
 
-        while res != OK:
+        while re.search(OK, s) is None:
             s += self.cxn.read(self.cxn.inWaiting())
-            try:
-                res = re.search('>', s).group(0)
-                if res == '>':
-                    print('Command ' + cmd + ' completed without ' +
-                          'verification of success.')
-                    return
-                else:
-                    res = re.search(OK, s).group(0)
-            except AttributeError:
-                res = ''
-
-        if debug:
+            #if re.search('>', s) is not None:
+            #    print('Command ' + cmd + ' completed without ' +
+            #          'verification of success.')
+            #    return s
+        if self.debug:
             print('Command ' + cmd + ' completed successfully.')
         return s
 
@@ -203,16 +200,18 @@ class StArm():
         self.cxn.write(cmd + CR)
         self.block_on_result(cmd)
 
-    def move_to(self, x, y, z, debug=False, block=True):
+    def move_to(self, x, y, z, block=True):
         cmd = str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO'
-        if debug:
-            print('Moving to cartesian coords: (' + str(x) + ', ' +
-                  str(y) + ', ' + str(z) + ')')
         self.cxn.flushInput()
         self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
         if block:
             self.block_on_result(cmd)
             self.where()
+
+#    def create_route(self, pt_list, name):
+#        cmd = CARTESIAN_NEW_ROUTE + ' ' + name + ' ' + str(len(pt_list)) + \
+#                ' ' + RESERVE + ' ' + name + ' ' +name + ' ' + \
+#                LEARN_DECIMAL_CF
 
     def rotate_wrist(self, roll):
         cmd = TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO
@@ -267,20 +266,8 @@ class StArm():
         cmd = WHERE
         self.cxn.flushInput()
         self.cxn.write(cmd + CR)
-        #res = self.block_on_result(cmd)
-        res = self.cxn.readline()
-        #TODO
-        #Rewrite this method to use block_on_result
+        res = self.block_on_result(cmd)
         try:
-            while re.search(OK, res) is None:
-            #while res[-2:] != 'OK':
-                res += self.cxn.readline()
-                if res != '':
-                    if res[-3] == '>':
-                        print('WHERE command completed without' +
-                              ' verification of success.')
-                        break
-
             lines = res.split('\r\n')
             #TODO: Need to account for possibility that arm is in decimal mode
 
