@@ -79,6 +79,8 @@ class StArm():
         # TODO
         # Check and parse return values of all ROBOFORTH methods called.
         self.debug = False
+        self.curr_pos = StPosCart()
+        self.prev_pos = StPosCart()
         if init:
             self.cxn.flushInput()
             self.purge()
@@ -88,10 +90,7 @@ class StArm():
             self.calibrate()
             self.home()
             self.cartesian()
-
-        self.curr_pos = StPosCart()
-        self.prev_pos = StPosCart()
-        self.where()
+            self.where()
 
         self.tool_length = 0
 
@@ -203,15 +202,18 @@ class StArm():
     def move_to(self, x, y, z, block=True):
         cmd = str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO'
         self.cxn.flushInput()
-        self.cxn.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' MOVETO' + CR)
+        self.cxn.write(cmd + CR)
         if block:
             self.block_on_result(cmd)
             self.where()
 
-#    def create_route(self, pt_list, name):
-#        cmd = CARTESIAN_NEW_ROUTE + ' ' + name + ' ' + str(len(pt_list)) + \
-#                ' ' + RESERVE + ' ' + name + ' ' +name + ' ' + \
-#                LEARN_DECIMAL_CF
+    def move(self, del_x, del_y, del_z):
+        cmd = str(del_x) + ' ' + str(del_y) + ' ' + str(del_z) + ' MOVE'
+        self.cxn.flushInput()
+        self.cxn.write(cmd + CR)
+        if block:
+            self.block_on_result(cmd)
+            self.where()
 
     def rotate_wrist(self, roll):
         cmd = TELL + ' ' + WRIST + ' ' + str(roll) + ' ' + MOVETO
